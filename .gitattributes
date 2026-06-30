@@ -1,0 +1,20 @@
+# Normalize line endings: store as LF in the repo and check out as LF everywhere.
+# This keeps shell scripts (start.sh) and Python valid on Linux servers, and silences
+# the "LF will be replaced by CRLF" warnings on Windows.
+* text=auto eol=lf
+
+# Scripts/code that must run with LF on Linux:
+*.sh   text eol=lf
+*.py   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+Dockerfile text eol=lf
+Procfile   text eol=lf
+
+# Binary assets — never normalize:
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.ico  binary
+*.npy  binary

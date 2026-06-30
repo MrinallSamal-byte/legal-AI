@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lexa — Legal AI Assistant</title>
+<style>
+  :root{
+    --bg:#0e1117; --panel:#161b22; --panel2:#1c2330; --border:#2a3240;
+    --text:#e6edf3; --muted:#8b97a7; --accent:#5b8cff; --accent2:#3b6fe0;
+    --good:#3fb950; --warn:#d29922; --bad:#f85149; --radius:12px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       background:var(--bg);color:var(--text);height:100vh;overflow:hidden}
+  button{font-family:inherit;cursor:pointer}
+  input,textarea,select{font-family:inherit}
+  .hidden{display:none !important}
+  mark{background:rgba(91,140,255,.30);color:var(--text);border-radius:3px;padding:0 2px}
+
+  #auth{height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+        padding:32px;width:100%;max-width:400px}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .brand .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+        display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff}
+  h1{font-size:22px;margin:0}
+  .sub{color:var(--muted);font-size:13px;margin:4px 0 22px}
+  label{display:block;font-size:12px;color:var(--muted);margin:14px 0 6px}
+  input,select,textarea{width:100%;background:var(--panel2);border:1px solid var(--border);
+        color:var(--text);border-radius:9px;padding:11px 12px;font-size:14px;outline:none}
+  input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:12px;
+        width:100%;font-weight:600;font-size:14px;margin-top:20px}
+  .btn:hover{background:var(--accent2)}
+  .switch{text-align:center;margin-top:16px;font-size:13px;color:var(--muted)}
+  .switch a{color:var(--accent);text-decoration:none;cursor:pointer}
+  .err{color:var(--bad);font-size:13px;margin-top:12px;min-height:18px}
+  .disclaimer{font-size:11px;color:var(--muted);margin-top:18px;line-height:1.5;
+        border-top:1px solid var(--border);padding-top:14px}
+
+  #app{height:100vh;display:grid;grid-template-columns:260px 1fr}
+  .sidebar{background:var(--panel);border-right:1px solid var(--border);display:flex;
+        flex-direction:column;padding:16px;gap:14px;min-width:0}
+  .meter{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px}
+  .meter .row{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+  .bar{height:7px;background:var(--border);border-radius:5px;margin-top:8px;overflow:hidden}
+  .bar>div{height:100%;background:var(--accent);width:0%}
+  .tierpill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;
+        background:var(--panel2);border:1px solid var(--border);text-transform:uppercase}
+  .newbtn{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:9px;
+        padding:9px;font-size:13px;font-weight:600}
+  .newbtn:hover{border-color:var(--accent)}
+  .convos{flex:1;overflow:auto;display:flex;flex-direction:column;gap:6px}
+  .convo{font-size:13px;color:var(--muted);padding:8px 10px;border-radius:8px;cursor:pointer;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .convo:hover,.convo.active{background:var(--panel2);color:var(--text)}
+  .side-foot{display:flex;flex-direction:column;gap:8px}
+  .upgrade{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;
+        border-radius:9px;padding:10px;font-weight:600;font-size:13px}
+  .linkbtn{background:none;border:none;color:var(--muted);font-size:12px;text-align:left;padding:4px}
+  .linkbtn:hover{color:var(--text)}
+
+  .main{display:flex;flex-direction:column;height:100vh;min-width:0}
+  .topbar{padding:14px 22px;border-bottom:1px solid var(--border);display:flex;
+        align-items:center;justify-content:space-between}
+  .topbar .t{font-weight:600}
+  .modelsel{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+  .modelsel select{width:auto;padding:6px 8px}
+  .thread{flex:1;overflow:auto;padding:24px;display:flex;flex-direction:column;gap:18px}
+  .msg{max-width:820px;width:100%;margin:0 auto;display:flex;gap:12px}
+  .avatar{width:30px;height:30px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;
+        justify-content:center;font-size:13px;font-weight:700}
+  .avatar.u{background:var(--panel2);border:1px solid var(--border)}
+  .avatar.a{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+  .bubble{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;
+        font-size:14.5px;line-height:1.65;flex:1;min-width:0;white-space:pre-wrap;word-wrap:break-word}
+  .msg.user .bubble{background:var(--panel2)}
+  .status{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin-bottom:6px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
+        padding:3px 8px;border-radius:6px;margin-bottom:8px}
+  .badge.approve{background:rgba(63,185,80,.12);color:var(--good)}
+  .badge.revise,.badge.reject{background:rgba(210,153,34,.12);color:var(--warn)}
+  .badge.abstain{background:rgba(139,151,167,.14);color:var(--muted)}
+  .citemark{color:var(--accent);cursor:pointer;font-weight:600;font-size:11px;vertical-align:super;
+        text-decoration:none;padding:0 1px}
+  .citemark:hover{text-decoration:underline}
+  .cites{margin-top:12px;border-top:1px dashed var(--border);padding-top:10px}
+  .cites h4{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+  .citechip{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--border);
+        border-radius:8px;padding:6px 10px;font-size:12.5px;margin:0 6px 6px 0;cursor:pointer;color:var(--text)}
+  .citechip:hover{border-color:var(--accent)}
+  .citechip .n{color:var(--accent);font-weight:700}
+  .reasoning{margin-top:10px}
+  .reasoning summary{cursor:pointer;font-size:12px;color:var(--muted)}
+  .reasoning .body{font-size:13px;color:var(--muted);margin-top:8px;white-space:pre-wrap}
+  .composer{border-top:1px solid var(--border);padding:16px 22px}
+  .composer .wrap{max-width:820px;margin:0 auto;display:flex;gap:10px;align-items:flex-end}
+  .composer textarea{resize:none;max-height:160px;min-height:48px}
+  .send{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:0 18px;height:48px;font-weight:600}
+  .send:disabled{opacity:.5;cursor:not-allowed}
+  .foot-disc{max-width:820px;margin:8px auto 0;font-size:11px;color:var(--muted);text-align:center}
+  .empty{margin:auto;text-align:center;color:var(--muted);max-width:460px}
+  .empty h2{color:var(--text);font-weight:650}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:18px}
+  .chip{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:8px 14px;
+        font-size:13px;color:var(--muted)}
+  .chip:hover{color:var(--text);border-color:var(--accent)}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);
+        border:1px solid var(--border);padding:10px 16px;border-radius:9px;font-size:13px;z-index:50}
+
+  /* Citation viewer drawer */
+  .drawer{position:fixed;top:0;right:0;height:100vh;width:420px;max-width:90vw;background:var(--panel);
+        border-left:1px solid var(--border);box-shadow:-10px 0 30px rgba(0,0,0,.35);transform:translateX(100%);
+        transition:transform .22s ease;z-index:60;display:flex;flex-direction:column}
+  .drawer.open{transform:translateX(0)}
+  .drawer .head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;
+        align-items:flex-start;justify-content:space-between;gap:10px}
+  .drawer .head h3{margin:0;font-size:15px}
+  .drawer .head .x{background:none;border:none;color:var(--muted);font-size:20px;line-height:1}
+  .drawer .meta{font-size:12px;color:var(--muted);margin-top:6px}
+  .drawer .body{padding:18px 20px;overflow:auto;font-size:14px;line-height:1.7}
+  .drawer .passage{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:14px}
+  .drawer .src{margin-top:16px}
+  .drawer .src a{color:var(--accent);text-decoration:none;font-size:13px}
+  .drawer .src a:hover{text-decoration:underline}
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:55;opacity:0;pointer-events:none;transition:opacity .22s}
+  .scrim.open{opacity:1;pointer-events:auto}
+</style>
+</head>
+<body>
+
+<!-- ===== AUTH ===== -->
+<div id="auth">
+  <div class="card">
+    <div class="brand"><div class="logo">L</div><h1>Lexa</h1></div>
+    <div class="sub">Grounded legal research — with citations, not guesses.</div>
+
+    <div id="loginForm">
+      <label>Email</label><input id="li_email" type="email" placeholder="you@example.com" />
+      <label>Password</label><input id="li_pw" type="password" placeholder="••••••••" />
+      <button class="btn" onclick="doLogin()">Log in</button>
+      <div class="err" id="li_err"></div>
+      <div class="switch">No account? <a onclick="showSignup()">Create one</a></div>
+    </div>
+
+    <div id="signupForm" class="hidden">
+      <label>Email</label><input id="su_email" type="email" placeholder="you@example.com" />
+      <label>Password</label><input id="su_pw" type="password" placeholder="letters + numbers, 8+ chars" />
+      <label>Jurisdiction</label>
+      <select id="su_jur">
+        <option value="US">United States (federal)</option>
+        <option value="US-CA">US — California</option>
+        <option value="US-NY">US — New York</option>
+        <option value="US-TX">US — Texas</option>
+        <option value="UK">United Kingdom</option>
+        <option value="IN">India</option>
+      </select>
+      <button class="btn" onclick="doSignup()">Create account</button>
+      <div class="err" id="su_err"></div>
+      <div class="switch">Have an account? <a onclick="showLogin()">Log in</a></div>
+    </div>
+
+    <div class="disclaimer">Lexa provides general legal information, not legal advice, and is
+      not a substitute for a licensed attorney. Answers are grounded in retrieved sources and
+      checked by a verification step, but you should confirm anything important with counsel.</div>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="app" class="hidden">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo">L</div><h1 style="font-size:18px">Lexa</h1></div>
+    <button class="newbtn" onclick="newChat()">+ New question</button>
+    <div class="meter">
+      <div class="row"><span>Plan</span><span class="tierpill" id="tierPill">free</span></div>
+      <div class="row" style="margin-top:10px"><span>Usage</span><span id="usageTxt">0 / 5</span></div>
+      <div class="bar"><div id="usageBar"></div></div>
+    </div>
+    <button class="upgrade" id="upgradeBtn" onclick="upgrade()">Upgrade plan</button>
+    <div style="font-size:11px;color:var(--muted)">Recent</div>
+    <div class="convos" id="convos"></div>
+    <div class="side-foot">
+      <div class="linkbtn" id="whoami"></div>
+      <button class="linkbtn" onclick="doLogout()">Log out</button>
+    </div>
+  </aside>
+
+  <section class="main">
+    <div class="topbar">
+      <div class="t">Legal research</div>
+      <div class="modelsel" id="modelWrap">
+        <span>Model</span>
+        <select id="modelSel" title="Premium model choice (Pro plan)">
+          <option value="">Auto (by plan)</option>
+          <option value="premium-a">Premium A (Opus-class)</option>
+          <option value="premium-o">Premium O (GPT-class)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="thread" id="thread">
+      <div class="empty" id="empty">
+        <h2>Ask a legal question</h2>
+        <p>Lexa retrieves real source text, drafts an answer citing it, and a verifier checks
+           every claim before you see it. It will say "I don't know" rather than invent law.</p>
+        <div class="chips">
+          <button class="chip" onclick="useChip(this)">What does the First Amendment protect?</button>
+          <button class="chip" onclick="useChip(this)">Explain the protection against self-incrimination.</button>
+          <button class="chip" onclick="useChip(this)">What is equal protection under the law?</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="composer">
+      <div class="wrap">
+        <textarea id="q" placeholder="Ask a legal question…" rows="1"
+                  oninput="autogrow(this)" onkeydown="keySend(event)"></textarea>
+        <button class="send" id="sendBtn" onclick="ask()">Send</button>
+      </div>
+      <div class="foot-disc">Lexa can make mistakes and is not a substitute for a licensed attorney. Verify important matters with counsel.</div>
+    </div>
+  </section>
+</div>
+
+<!-- ===== Citation viewer drawer ===== -->
+<div class="scrim" id="scrim" onclick="closeCite()"></div>
+<aside class="drawer" id="drawer">
+  <div class="head">
+    <div>
+      <h3 id="d_title">Source</h3>
+      <div class="meta" id="d_meta"></div>
+    </div>
+    <button class="x" onclick="closeCite()">×</button>
+  </div>
+  <div class="body">
+    <div class="passage" id="d_passage"></div>
+    <div class="src" id="d_src"></div>
+  </div>
+</aside>
+
+<script>
+const API = "";
+let state = { access:null, refresh:null, me:null };
+let currentConvo = null;
+let citeStore = {};       // msgId -> {question, citations}
+let msgCounter = 0;
+
+// ---------- tokens ----------
+function saveTokens(t){ state.access=t.access_token; state.refresh=t.refresh_token;
+  localStorage.setItem("lexa_tok", JSON.stringify(t)); }
+function loadTokens(){ try{const t=JSON.parse(localStorage.getItem("lexa_tok"));
+  if(t){state.access=t.access_token;state.refresh=t.refresh_token;return true;}}catch(e){} return false; }
+function clearTokens(){ localStorage.removeItem("lexa_tok"); state={access:null,refresh:null,me:null}; }
+
+async function api(path, opts={}, retry=true){
+  opts.headers = Object.assign({"Content-Type":"application/json"}, opts.headers||{});
+  if(state.access) opts.headers["Authorization"] = "Bearer "+state.access;
+  const r = await fetch(API+path, opts);
+  if(r.status===401 && retry && state.refresh){
+    const rr = await fetch(API+"/auth/refresh",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({refresh_token:state.refresh})});
+    if(rr.ok){ saveTokens(await rr.json()); return api(path,opts,false); }
+    clearTokens(); showAuth();
+  }
+  return r;
+}
+
+// ---------- auth ----------
+function showSignup(){ document.getElementById("loginForm").classList.add("hidden");
+  document.getElementById("signupForm").classList.remove("hidden"); }
+function showLogin(){ document.getElementById("signupForm").classList.add("hidden");
+  document.getElementById("loginForm").classList.remove("hidden"); }
+function showAuth(){ document.getElementById("app").classList.add("hidden");
+  document.getElementById("auth").classList.remove("hidden"); }
+function showApp(){ document.getElementById("auth").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden"); }
+
+async function doSignup(){
+  const email=document.getElementById("su_email").value.trim();
+  const password=document.getElementById("su_pw").value;
+  const jurisdiction=document.getElementById("su_jur").value;
+  const err=document.getElementById("su_err"); err.textContent="";
+  const r=await fetch(API+"/auth/register",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({email,password,jurisdiction})});
+  const d=await r.json();
+  if(!r.ok){ err.textContent=d.detail||"Sign up failed"; return; }
+  saveTokens(d); await boot();
+}
+async function doLogin(){
+  const email=document.getElementById("li_email").value.trim();
+  const password=document.getElementById("li_pw").value;
+  const err=document.getElementById("li_err"); err.textContent="";
+  const r=await fetch(API+"/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({email,password})});
+  const d=await r.json();
+  if(!r.ok){ err.textContent=d.detail||"Login failed"; return; }
+  saveTokens(d); await boot();
+}
+async function doLogout(){ try{await api("/auth/logout",{method:"POST"});}catch(e){} clearTokens(); showAuth(); }
+
+// ---------- boot ----------
+async function boot(){
+  const r=await api("/auth/me");
+  if(!r.ok){ clearTokens(); showAuth(); return; }
+  state.me=await r.json();
+  document.getElementById("whoami").textContent=state.me.email+" • "+state.me.jurisdiction;
+  document.getElementById("tierPill").textContent=state.me.tier;
+  document.getElementById("modelWrap").style.display = state.me.tier==="pro" ? "flex":"none";
+  document.getElementById("upgradeBtn").style.display = state.me.tier==="pro" ? "none":"block";
+  showApp(); refreshUsage(); loadConvos();
+}
+async function refreshUsage(){
+  const tiers=await (await api("/billing/tiers")).json();
+  const t=tiers[state.me.tier]; setUsage(window._used||0, t.quota);
+}
+function setUsage(used, limit){
+  window._used=used;
+  const txt=document.getElementById("usageTxt"), bar=document.getElementById("usageBar");
+  if(limit<0){ txt.textContent=used+" / ∞"; bar.style.width="12%"; bar.style.background="var(--good)"; }
+  else { txt.textContent=used+" / "+limit; const p=Math.min(100,(used/limit)*100);
+    bar.style.width=p+"%"; bar.style.background=p>=100?"var(--bad)":p>=80?"var(--warn)":"var(--accent)"; }
+}
+async function loadConvos(){
+  const r=await api("/chat/conversations"); if(!r.ok) return;
+  const rows=await r.json(); const el=document.getElementById("convos"); el.innerHTML="";
+  rows.forEach(c=>{ const d=document.createElement("div"); d.className="convo"; d.textContent=c.title;
+    d.onclick=()=>openConvo(c.id, d); el.appendChild(d); });
+}
+async function openConvo(cid, el){
+  const r=await api("/chat/conversations/"+cid); if(!r.ok) return;
+  const d=await r.json(); currentConvo=cid;
+  document.querySelectorAll(".convo").forEach(x=>x.classList.remove("active"));
+  if(el) el.classList.add("active");
+  const thread=document.getElementById("thread"); thread.innerHTML="";
+  d.messages.forEach(m=>{
+    if(m.role==="user") addMsg("user", esc(m.content));
+    else { const w=addMsg("assistant",""); finalizeAnswer(w, m.content, m.citations||[], "", m.verdict||"", ""); }
+  });
+}
+
+// ---------- chat helpers ----------
+function autogrow(t){ t.style.height="auto"; t.style.height=Math.min(160,t.scrollHeight)+"px"; }
+function keySend(e){ if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); ask(); } }
+function useChip(b){ document.getElementById("q").value=b.textContent; ask(); }
+function newChat(){ currentConvo=null; document.getElementById("thread").innerHTML=
+  '<div class="empty"><h2>Ask a legal question</h2><p>Grounded answers with citations you can open and verify.</p></div>'; }
+function esc(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+function addMsg(role, html){
+  document.getElementById("empty")?.remove();
+  const thread=document.getElementById("thread");
+  const wrap=document.createElement("div"); wrap.className="msg "+role;
+  wrap.innerHTML=`<div class="avatar ${role==='user'?'u':'a'}">${role==='user'?'You':'L'}</div>
+                  <div class="bubble">${html}</div>`;
+  thread.appendChild(wrap); thread.scrollTop=thread.scrollHeight; return wrap;
+}
+function verdictLabel(v){ return {approve:"✓ Verified against sources",revise:"⚠ Low confidence",
+  reject:"⚠ Unverified",abstain:"○ No authoritative source found"}[v]||v; }
+
+// turn inline [id] markers into clickable citation links
+function linkifyCites(escapedText, msgId, citations){
+  let html = escapedText;
+  citations.forEach((c,i)=>{
+    const token = "["+c.id+"]";
+    const esct = esc(token);
+    const link = `<a class="citemark" onclick="openCite('${msgId}',${i})">[${i+1}]</a>`;
+    html = html.split(esct).join(link);
+  });
+  return html.replace(/\n/g,"<br>");
+}
+
+function finalizeAnswer(wrap, answerText, citations, reasoning, verdict, question){
+  const msgId = "m"+(++msgCounter);
+  citeStore[msgId] = { question: question||"", citations: citations||[] };
+  const bubble = wrap.querySelector(".bubble");
+  let badge = verdict ? `<div class="badge ${verdict}">${verdictLabel(verdict)}</div>` : "";
+  let body = linkifyCites(esc(answerText), msgId, citations||[]);
+  let cites = "";
+  if(citations && citations.length){
+    cites = `<div class="cites"><h4>Sources — click to read the passage</h4>` +
+      citations.map((c,i)=>`<span class="citechip" onclick="openCite('${msgId}',${i})">
+         <span class="n">[${i+1}]</span> ${esc(c.citation)}</span>`).join("") + `</div>`;
+  }
+  let rs = reasoning ? `<details class="reasoning"><summary>Show reasoning</summary>
+      <div class="body">${esc(reasoning)}</div></details>` : "";
+  bubble.innerHTML = badge + body + cites + rs;
+}
+
+// ---------- streaming ask ----------
+async function ask(){
+  const ta=document.getElementById("q"); const q=ta.value.trim(); if(!q) return;
+  ta.value=""; autogrow(ta);
+  document.getElementById("sendBtn").disabled=true;
+  addMsg("user", esc(q));
+  const wrap=addMsg("assistant","");
+  const bubble=wrap.querySelector(".bubble");
+  bubble.innerHTML=`<div class="status"><span class="dot"></span><span id="st">Starting…</span></div><span id="ans"></span>`;
+  const stEl=bubble.querySelector("#st"), ansEl=bubble.querySelector("#ans");
+
+  try{
+    const resp=await fetch(API+"/chat/ask/stream",{method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+state.access},
+      body:JSON.stringify({question:q, model_preference:document.getElementById("modelSel").value||null,
+                           conversation_id:currentConvo})});
+    if(!resp.ok){
+      let detail="Error"; try{ detail=(await resp.json()).detail||detail; }catch(e){}
+      bubble.innerHTML=`<span style="color:var(--warn)">${esc(detail)}</span>`;
+      if(resp.status===402) toast("Free limit reached — upgrade to continue.");
+      if(resp.status===401){ // token expired: refresh once and retry
+        const rr=await fetch(API+"/auth/refresh",{method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({refresh_token:state.refresh})});
+        if(rr.ok){ saveTokens(await rr.json()); document.getElementById("sendBtn").disabled=false;
+          ta.value=q; return ask(); }
+      }
+      return;
+    }
+    const reader=resp.body.getReader(); const dec=new TextDecoder();
+    let buf="", answer="", done=null;
+    while(true){
+      const {value,done:rd}=await reader.read(); if(rd) break;
+      buf+=dec.decode(value,{stream:true});
+      let nl;
+      while((nl=buf.indexOf("\n"))>=0){
+        const line=buf.slice(0,nl).trim(); buf=buf.slice(nl+1);
+        if(!line) continue;
+        const ev=JSON.parse(line);
+        if(ev.type==="status"){ stEl.textContent=ev.label||ev.stage; }
+        else if(ev.type==="token"){ answer+=ev.text; ansEl.innerHTML=esc(answer).replace(/\n/g,"<br>");
+          document.getElementById("thread").scrollTop=1e9; }
+        else if(ev.type==="done"){ done=ev; }
+      }
+    }
+    if(done){
+      currentConvo=done.conversation_id;
+      finalizeAnswer(wrap, answer, done.citations, done.reasoning, done.verdict, q);
+      if(done.quota_limit!==undefined) setUsage(done.quota_used, done.quota_limit);
+      loadConvos();
+    }
+  }catch(e){ bubble.innerHTML="<span style='color:var(--bad)'>Network error.</span>"; }
+  finally{ document.getElementById("sendBtn").disabled=false; }
+}
+
+// ---------- citation viewer ----------
+function highlight(text, question){
+  let html = esc(text);
+  const terms = (question||"").toLowerCase().match(/[a-z]{4,}/g) || [];
+  const uniq = [...new Set(terms)].sort((a,b)=>b.length-a.length).slice(0,12);
+  uniq.forEach(t=>{
+    const re = new RegExp("\\b("+t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"[a-z]*)\\b","gi");
+    html = html.replace(re, "<mark>$1</mark>");
+  });
+  return html;
+}
+function openCite(msgId, idx){
+  const store=citeStore[msgId]; if(!store) return;
+  const c=store.citations[idx]; if(!c) return;
+  document.getElementById("d_title").textContent = c.citation || "Source";
+  document.getElementById("d_meta").textContent =
+    `Effective ${c.effective_date||"—"} · relevance ${c.relevance!=null?Math.round(c.relevance*100)+"%":"—"}`;
+  document.getElementById("d_passage").innerHTML = highlight(c.text||"(passage unavailable)", store.question);
+  document.getElementById("d_src").innerHTML = c.source_url ?
+    `<a href="${c.source_url}" target="_blank" rel="noopener">View original source ↗</a>` : "";
+  document.getElementById("drawer").classList.add("open");
+  document.getElementById("scrim").classList.add("open");
+}
+function closeCite(){ document.getElementById("drawer").classList.remove("open");
+  document.getElementById("scrim").classList.remove("open"); }
+
+async function upgrade(){
+  const r=await api("/billing/upgrade",{method:"POST",body:JSON.stringify({tier:"pro"})});
+  if(r.ok){ toast("Upgraded to Pro (demo)."); await boot(); }
+}
+function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),3000); }
+
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeCite(); });
+(function(){ if(loadTokens()){ boot(); } else { showAuth(); } })();
+</script>
+</body>
+</html>

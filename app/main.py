@@ -13,7 +13,7 @@ from .config import settings
 from .db import init_db
 from .logging_config import configure_logging, get_logger
 from .ratelimit import rate_limit
-from .routers import account, auth, billing, chat
+from .routers import account, auth, billing, chat, meta
 from .security_headers import SecurityHeadersMiddleware
 
 configure_logging()
@@ -78,6 +78,7 @@ app.include_router(auth.router, dependencies=_rl)
 app.include_router(chat.router, dependencies=_rl)
 app.include_router(billing.router, dependencies=_rl)
 app.include_router(account.router, dependencies=_rl)
+app.include_router(meta.router, dependencies=_rl)
 
 
 if os.path.isdir(FRONTEND_DIR):

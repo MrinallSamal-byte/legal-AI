@@ -110,3 +110,12 @@ def test_security_headers_present():
 def test_password_too_long_rejected():
     r = client.post("/auth/register", json={"email": "long@x.com", "password": "a1" * 50})
     assert r.status_code == 422
+
+
+def test_meta_sources_lists_corpus():
+    d = client.get("/meta/sources").json()
+    assert d["corpus_count"] >= 12
+    cites = [c["citation"] for c in d["grounded_corpus"]]
+    assert any("amend. I" in c for c in cites)
+    assert any("amend. XIX" in c for c in cites)   # added in the expanded corpus
+    assert all(c["source_url"].startswith("https://") for c in d["grounded_corpus"])

@@ -46,3 +46,11 @@ def test_offtopic_abstains_ontopic_grounds():
     assert is_grounded("Explain equal protection.", r.retrieve("Explain equal protection.", k=3, min_score=0.0))
     assert not is_grounded("recipe for chocolate cake", r.retrieve("recipe for chocolate cake", k=3, min_score=0.0))
     assert not is_grounded("best programming language", r.retrieve("best programming language", k=3, min_score=0.0))
+
+
+def test_expanded_corpus_new_amendments():
+    r = _fresh()
+    assert len(r.store) >= 12
+    assert r.retrieve("right to keep and bear arms", k=1)[0].id == "usconst-amend-2"
+    assert r.retrieve("cruel and unusual punishment", k=1)[0].id == "usconst-amend-8"
+    assert r.retrieve("women's right to vote", k=1)[0].id == "usconst-amend-19"

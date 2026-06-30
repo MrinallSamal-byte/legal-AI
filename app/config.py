@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     access_token_minutes: int = 30
     refresh_token_days: int = 14
     min_password_length: int = 8
+    max_password_length: int = 72  # bcrypt limit
 
     database_url: str = "sqlite:///./lexa.db"
     auto_create_tables: bool = True   # dev convenience; set False in prod (use Alembic)
@@ -26,6 +27,8 @@ class Settings(BaseSettings):
     rate_limit_window_seconds: int = 60
 
     cors_origins: str = "*"
+    security_headers_enabled: bool = True
+    force_https: bool = False  # set true behind TLS to send HSTS + redirect
 
     llm_provider: str = "mock"
     request_timeout_seconds: float = 60.0
@@ -39,6 +42,12 @@ class Settings(BaseSettings):
     embeddings_dim: int = 256
 
     courtlistener_token: str = ""
+    govinfo_api_key: str = ""
+
+    # --- live government / public legal sources (fetched at query time) ---
+    live_sources_enabled: bool = False           # turn on real-time gov data
+    live_sources: str = "federal_register"       # comma list: federal_register, courtlistener, govinfo
+    live_results_per_source: int = 5
 
     # --- email (verification + password reset) ---
     app_base_url: str = "http://localhost:8000"

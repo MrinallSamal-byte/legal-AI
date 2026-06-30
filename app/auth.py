@@ -29,6 +29,8 @@ def verify_password(p: str, h: str) -> bool:
 def validate_password(p: str) -> str | None:
     if len(p) < settings.min_password_length:
         return f"Password must be at least {settings.min_password_length} characters."
+    if len(p.encode("utf-8")) > settings.max_password_length:
+        return f"Password must be at most {settings.max_password_length} bytes."
     if p.isalpha() or p.isdigit():
         return "Password must include both letters and numbers."
     return None

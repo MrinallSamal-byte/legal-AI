@@ -98,6 +98,48 @@ class Retriever:
                 for r, s in hits if s >= floor]
 
 
+    def live_retrieve(self, question: str, queries: list[str] | None = None,
+                      client=None) -> list[GroundedFact]:
+        """Fetch from real-time government/public legal APIs, embed on the fly, and rank
+        against the question. Returns [] if live sources are disabled. Per-source failures
+        are caught so one flaky API never breaks the answer."""
+        from .live_sources import enabled_source_names, get_live_sources
+        if not enabled_source_names():
+            return []
+        import httpx
+        own = client is None
+        c = client or httpx.Client(timeout=settings.request_timeout_seconds)
+        try:
+            docs, seen = [], set()
+            qs = [question, *(queries or [])][:3]
+            for src in get_live_sources(c):
+                for q in qs:
+                    try:
+                        for d in src.search(q, settings.live_results_per_source):
+                            if d.id not in seen:
+                                seen.add(d.id)
+                                docs.append(d)
+                    except Exception as e:  # noqa: BLE001
+                        from ..logging_config import get_logger
+                        get_logger("lexa.live").warning("live source failed", extra={
+                            "extra_fields": {"source": getattr(src, "name", "?"), "error": str(e)}})
+            if not docs:
+                return []
+            qvec = self.embedder.embed([question])[0].astype(np.float32)
+            mat = self.embedder.embed([f"{d.citation}. {d.text}" for d in docs])
+            sims = mat @ qvec
+            facts = [GroundedFact(id=d.id, text=d.text, citation=d.citation,
+                                  source_id=d.source_id, source_url=d.source_url,
+                                  effective_date=d.effective_date, keywords="",
+                                  score=round(float(sc), 4))
+                     for d, sc in zip(docs, sims)]
+            facts.sort(key=lambda f: -f.score)
+            return facts[:max(6, settings.live_results_per_source)]
+        finally:
+            if own:
+                c.close()
+
+
 _retriever: Retriever | None = None
 
 

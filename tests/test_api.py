@@ -98,3 +98,15 @@ def test_conversation_history_roundtrip():
     roles = [m["role"] for m in detail["messages"]]
     assert roles == ["user", "assistant"]
     assert detail["messages"][1]["citations"]
+
+
+def test_security_headers_present():
+    r = client.get("/health")
+    assert r.headers.get("x-content-type-options") == "nosniff"
+    assert r.headers.get("x-frame-options") == "DENY"
+    assert "content-security-policy" in {k.lower() for k in r.headers.keys()}
+
+
+def test_password_too_long_rejected():
+    r = client.post("/auth/register", json={"email": "long@x.com", "password": "a1" * 50})
+    assert r.status_code == 422

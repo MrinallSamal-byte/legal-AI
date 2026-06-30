@@ -106,8 +106,18 @@ def pipeline_events(provider: BaseProvider, question: str, jurisdiction: str,
         for f in retriever.retrieve(q, jurisdiction, k=4):
             if f.id not in best or f.score > best[f.id].score:
                 best[f.id] = f
+    # Live, real-time government/public legal sources (if enabled).
+    from ..rag.live_sources import enabled_source_names
+    live_names = enabled_source_names()
+    if live_names:
+        yield "status", {"stage": "live", "label": "Querying live sources: " + ", ".join(
+            n.replace("_", " ") for n in live_names)}
+        for f in retriever.live_retrieve(question, queries):
+            if f.id not in best or f.score > best[f.id].score:
+                best[f.id] = f
+
     facts = sorted(best.values(), key=lambda f: -f.score)[:6]
-    trace.append(f"retriever: {len(facts)} grounded facts")
+    trace.append(f"retriever: {len(facts)} grounded facts (live={bool(live_names)})")
     yield "status", {"stage": "grounded", "label": f"Found {len(facts)} relevant passages",
                      "facts": len(facts)}
 

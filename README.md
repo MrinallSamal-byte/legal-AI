@@ -53,6 +53,36 @@ python -m scripts.ingest_courtlistener --query "qualified immunity" --pages 2
 Pulls opinions from CourtListener (a free public legal database), chunks, embeds, and
 indexes them. Needs outbound network access, so run it on your own machine.
 
+## Live government data (real-time)
+
+Lexa can ground answers in **real, official government sources fetched at query time** and
+link each citation back to the authoritative page. Enable it in `.env`:
+
+```
+LIVE_SOURCES_ENABLED=true
+LIVE_SOURCES=federal_register,courtlistener   # govinfo also available
+GOVINFO_API_KEY=        # only if you add govinfo (free key from api.data.gov)
+COURTLISTENER_TOKEN=    # optional, raises CourtListener rate limits
+```
+
+Built-in connectors (all official / free):
+
+| Source | Key needed | What it provides |
+|--------|-----------|------------------|
+| **Federal Register** (`federalregister.gov`) | none | US rules, notices, executive & presidential documents |
+| **CourtListener** (`courtlistener.com`) | optional token | US court opinions / case law |
+| **GovInfo** (`api.govinfo.gov`) | free key | US Code, CFR, bills, and more |
+
+When enabled, the live results are embedded on the fly, merged with the local corpus,
+ranked, and run through the same grounding + verification pipeline — and the streaming UI
+shows a real-time **"Querying live sources: …"** step. If a source is down, it's skipped so
+the rest of the answer still works.
+
+> These connectors require internet access, so they run on your machine — not in the
+> offline test sandbox or CI. Their request/response handling is unit-tested with mocked
+> responses; a real end-to-end test runs with `LIVE_E2E=1 pytest tests/test_live_sources.py`.
+> Review each source's API terms of use before heavy production use.
+
 ## Tests
 
 ```bash

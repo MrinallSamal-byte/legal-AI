@@ -14,6 +14,7 @@ from .db import init_db
 from .logging_config import configure_logging, get_logger
 from .ratelimit import rate_limit
 from .routers import account, auth, billing, chat
+from .security_headers import SecurityHeadersMiddleware
 
 configure_logging()
 log = get_logger("lexa")
@@ -51,6 +52,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+if settings.security_headers_enabled:
+    app.add_middleware(SecurityHeadersMiddleware)
+if settings.force_https:
+    from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
+    app.add_middleware(HTTPSRedirectMiddleware)
+
 
 @app.exception_handler(Exception)
 async def unhandled(request: Request, exc: Exception):
@@ -60,8 +67,10 @@ async def unhandled(request: Request, exc: Exception):
 
 @app.get("/health", tags=["meta"])
 def health():
+    from .rag.live_sources import enabled_source_names
     return {"status": "ok", "provider": settings.llm_provider,
-            "embeddings": settings.embeddings_backend}
+            "embeddings": settings.embeddings_backend,
+            "live_sources": enabled_source_names()}
 
 
 _rl = [Depends(rate_limit)]
